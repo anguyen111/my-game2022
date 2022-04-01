@@ -2,16 +2,20 @@
 let canvas = null;
 let ctx = null;
 
-let WIDTH = 1024;
-let HEIGHT = 768;
+// Variables for game measurements
+let WIDTH = 704;
+let HEIGHT = 288;
 let TILESIZE = 32;
 let BGCOLOR = "blue";
 
 let allSprites = [];
+let allWalls = [];
+let allCacti = [];
 
 let keysDown = {};
 let keysUp = {};
 
+// Event listeners that wait for keyboard input
 addEventListener("keydown", function (event) {
     // keysDown = {};
     keysDown[event.key] = true;
@@ -24,20 +28,20 @@ addEventListener("keyup", function (event) {
     console.log("the key that was removed " + event);
 }, false);
 
-
+// String that olds value we can use to build level
 let gamePlan = `
 #.....................
 ......................
 ......................
-......................
+.............|........
 ...........#####......
 ......................
-......................
+.|................|...
 ####..################
 ####..################`;
 
 // this is like a MOLD
-class Square {
+class Sprite {
     constructor(x, y, w, h, color) {
         this.x = x;
         this.y = y;
@@ -45,60 +49,106 @@ class Square {
         this.h = h;
         this.color = color;
         this.speed = 3;
-        this.speed2 = 3;
         allSprites.push(this);
     }
     create(x,y,w,h) {
-        return new Square(x, y, w, h)
+        return new Sprite(x, y, w, h)
+    }
+    collideWith(obj) {
+        if (this.x + this.w >= obj.x &&
+            this.x <= obj.x + obj.w &&
+            this.y + this.h >= obj.y &&
+            this.y <= obj.y + obj.h
+        ) {
+            return true;
+        }
+
     }
     // update method
-    update() {
-        this.x += this.speed*Math.random()*5;
-        this.y += this.speed2*Math.random()*5;
-        if (this.x > WIDTH || this.x < 0){
-               this.speed*=-1; 
-            }
-        if (this.y < 0 || this.y > HEIGHT) {
-            this.speed2*=-1
-        }
-    }
-    // draw method
     draw() {
         ctx.fillStyle = this.color;
         ctx.fillRect(this.x, this.y, this.w, this.h);
     }
 }
 
-class Player {
+class Wall extends Sprite {
     constructor(x, y, w, h, color) {
+        super(x, y, w, h, color);
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = "rgb(0, 200, 200)";
+        allWalls.push(this);
+    }
+    create(x,y,w,h) {
+        return new Wall(x, y, w, h)
+    }
+    // update method
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
+}
+
+class Cactus extends Sprite {
+    constructor(x, y, w, h, color) {
+        super(x, y, w, h, color);
+        this.x = x;
+        this.y = y;
+        this.w = w;
+        this.h = h;
+        this.color = "rgb(0, 255, 0)";
+        allCacti.push(this);
+    }
+    create(x,y,w,h, color) {
+        return new Cactus(x, y, w, h, color)
+    }
+    // update method
+    draw() {
+        ctx.fillStyle = this.color;
+        ctx.fillRect(this.x, this.y, this.w, this.h);
+    }
+}
+
+class Player extends Sprite {
+    constructor(x, y, w, h, color) {
+        super(x, y, w, h, color);
         this.x = x;
         this.y = y;
         this.w = w;
         this.h = h;
         this.color = color;
-        this.speed = 15;
+        this.speed = 10;
         allSprites.push(this);
     }
     input() {
         if ("w" in keysDown) {
             this.y-=this.speed;
-        } if ("a" in keysDown) {
+        }
+        if ("a" in keysDown) {
             this.x-=this.speed;
-        } if ("s" in keysDown) {
+        }
+        if ("s" in keysDown) {
             this.y+=this.speed;
-        }if ("d" in keysDown) {
+        }
+        if ("d" in keysDown) {
             this.x+=this.speed;
         }
     }
+    // adding updates....
     update() {
         this.input();
         if (this.x > WIDTH-this.w){
             this.x = WIDTH-this.w;
-         } if (this.x < 0){
+         }
+        if (this.x < 0){
             this.x = 0;
-         } if (this.y > HEIGHT-this.w){
-            this.y = HEIGHT-this.w;
-         } if (this.y < 0){
+         }
+        if (this.y > HEIGHT - this.h){
+            this.y = HEIGHT - this.h;
+         }
+        if (this.y < 0){
             this.y = 0;
          }
     }
@@ -133,8 +183,6 @@ class Circle {
     }
 }
 
-
-
 function makeGrid(plan, width) {
     let newGrid = [];
     let newRow = [];
@@ -156,9 +204,7 @@ function readLevel(grid) {
  let startActors = [];
     for (y in grid) {
         for (x in grid[y]) {
-
             let ch = grid[y][x];
-
             if (ch != "\n") {
                 let type = levelChars[ch];
                 if (typeof type == "string") {
@@ -167,21 +213,21 @@ function readLevel(grid) {
                     let t = new type;
                     startActors.push(t.create(x*TILESIZE, y*TILESIZE, TILESIZE, TILESIZE))
                 }
-                console.log(startActors);
+                // console.log(startActors);
             }
         }
-
     }
-
 }
 
 const levelChars = {
     ".": "empty",
-    "#": Square,
+    "#": Wall,
+    "|": Cactus,
 };
 
 console.log(makeGrid(gamePlan, 22));
-console.log(readLevel(makeGrid(gamePlan, 22)));
+readLevel(makeGrid(gamePlan, 22));
+console.log(allWalls);
 
 // initialization function
 // creates a div; sets attributes; appends body; creates canvas; puts canvas inside div
@@ -212,10 +258,11 @@ function init() {
 
 
 let player = new Player(WIDTH/2, HEIGHT/2, 64, 64, 'rgb(255, 255, 0)');
-let spongeBob = new Square(10, 10, 30, 30, 'rgb(255, 255, 0)');
-let patrick = new Square(10, 30, 65, 65, 'rgb(255, 150, 150)');
-let squidward = new Square(70, 90, 20, 20, 'rgb(0, 200, 200)');
-let sandy = new Circle(70, 200, 25, 40, 'rgb(150, 75, 0)');
+console.log(allSprites)
+// let spongeBob = new Sprite(10, 10, 30, 30, 'rgb(255, 255, 0)');
+// let patrick = new Sprite(10, 30, 65, 65, 'rgb(255, 150, 150)');
+// let squidward = new Sprite(70, 90, 20, 20, 'rgb(0, 200, 200)');
+// let sandy = new Circle(70, 200, 25, 40, 'rgb(150, 75, 0)');
 
 
 function input(){
@@ -223,10 +270,12 @@ function input(){
 }
 
 function update() {
-    // for (i of allSprites){
-    //     i.update();
-    // }
     player.update();
+    for (i of allCacti){
+        if (i.collideWith(player)){
+            console.log("ouch")
+        }
+    }
 }
 
 function draw() {
