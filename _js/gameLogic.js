@@ -15,6 +15,14 @@ let allCacti = [];
 let keysDown = {};
 let keysUp = {};
 
+function drawText(r, g, b, a, font, align, base, text, x, y) {
+    ctx.fillStyle = "rgba(" + r + "," + g + "," + b + "," + a + ")";
+    ctx.font = font;
+    ctx.textAlign = align;
+    ctx.textBaseline = base;
+    ctx.fillText(text, x, y);
+}
+
 // Event listeners that wait for keyboard input
 addEventListener("keydown", function (event) {
     // keysDown = {};
@@ -48,7 +56,6 @@ class Sprite {
         this.w = w;
         this.h = h;
         this.color = color;
-        this.speed = 3;
         allSprites.push(this);
     }
     create(x,y,w,h) {
@@ -116,29 +123,57 @@ class Player extends Sprite {
         super(x, y, w, h, color);
         this.x = x;
         this.y = y;
+        this.vx = 0;
+        this.vy = 0;
+        this.speed = 5;
+        this.gravity = 9.8;
+        this.coFriction = 2;
         this.w = w;
         this.h = h;
         this.color = color;
-        this.speed = 10;
+        this.health = 100;
+        this.jumpPower = 100;
         allSprites.push(this);
     }
+    frictionX(){
+        if (this.vx > 0.5){
+            this.vx -= this.coFriction;
+        }
+        else if (this.vx < -0.5){
+            this.vx += this.coFriction;
+        }
+        else {
+            this.vx = 0;
+        }
+    }
+    jump () {
+        this.vy = -this.jumpPower;
+        console.log(this.timesJumped)
+    }
     input() {
-        if ("w" in keysDown) {
-            this.y-=this.speed;
+        // if ("w" in keysDown) {
+        //     this.y-=this.speed;
+        // }
+        if (" " in keysDown || "w" in keysDown) {
+            this.jump();
         }
         if ("a" in keysDown) {
-            this.x-=this.speed;
+            this.vx-=this.speed;
         }
-        if ("s" in keysDown) {
-            this.y+=this.speed;
-        }
+        // if ("s" in keysDown) {
+        //     this.y+=this.speed;
+        // }
         if ("d" in keysDown) {
-            this.x+=this.speed;
+            this.vx+=this.speed;
         }
     }
     // adding updates....
     update() {
+        this.vy += this.gravity;
         this.input();
+        this.frictionX();
+        this.x += this.vx;
+        this.y += this.vy;
         if (this.x > WIDTH-this.w){
             this.x = WIDTH-this.w;
          }
@@ -273,9 +308,11 @@ function update() {
     player.update();
     for (i of allCacti){
         if (i.collideWith(player)){
-            console.log("ouch")
+            console.log("ouch...");
+            player.health--;
         }
     }
+
 }
 
 function draw() {
@@ -283,11 +320,21 @@ function draw() {
     for (i of allSprites){
         i.draw();
     }
+    // drawText(0, 0, 0, 1, "20px Helvetica", "left", "top", "FPS: " + fps, TILESIZE / 2, TILESIZE / 2);
+    drawText(255, 255, 255, 1, "20px Helvetica", "left", "top", "Player Health: " + player.health, TILESIZE / 2, 64);
 }
 
 
+
+let fps;
+let then = performance.now();
 function gameLoop(){
     // console.log('the game loop is alive!!!');
+    now = performance.now();
+    let delta = now - then;
+    fps = (Math.ceil(1000 / delta));
+    // totaltime = now - then;
+    then = now;
     update();
     draw();
     window.requestAnimationFrame(gameLoop);
